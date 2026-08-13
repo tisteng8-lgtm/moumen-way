@@ -1,4 +1,18 @@
-This is a complete, runnable HTML document for the "Moumen Way" endless runner game. You can save and open it in your browser to play.
+آه فهمتك! عايزها تكون زي لعبة Subway Surfers بالظبط! 🏃‍♂️🚆
+
+خليني أظبط اللعبة عشان تبقى زيها:
+
+---
+
+التعديلات المطلوبة:
+
+1. شكل الجري (3D perspective)
+
+Subway Surfers فيها منظور 3D، بس احنا هنعملها 2D لكن بنفس الإحساس:
+
+---
+
+الكود الجديد كامل - نسخة Subway Style:
 
 ```html
 <!DOCTYPE html>
@@ -15,30 +29,32 @@ This is a complete, runnable HTML document for the "Moumen Way" endless runner g
             user-select: none;
         }
         body {
-            background: #0b1a2f;
+            background: #0a0a1a;
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
             font-family: 'Segoe UI', Tahoma, sans-serif;
             touch-action: none;
+            overflow: hidden;
         }
         .game-wrapper {
-            background: #1e3a5f;
-            padding: 12px 12px 20px;
-            border-radius: 40px 40px 20px 20px;
-            box-shadow: 0 20px 30px rgba(0,0,0,0.7);
+            background: linear-gradient(180deg, #1a1a3e, #2a1a4e);
+            padding: 10px;
+            border-radius: 30px;
+            box-shadow: 0 0 50px rgba(100, 50, 255, 0.3);
+            border: 2px solid #6a4a9a;
         }
         canvas {
             display: block;
             width: 100%;
-            max-width: 400px;
+            max-width: 420px;
             height: auto;
-            aspect-ratio: 360 / 600;
-            background: #87CEEB;
-            border-radius: 28px;
+            aspect-ratio: 360 / 640;
+            background: linear-gradient(180deg, #1a2a6a, #2a1a4a);
+            border-radius: 20px;
             margin: 0 auto;
-            box-shadow: inset 0 0 0 3px #f5c542, 0 10px 15px rgba(0,0,0,0.5);
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.5);
             touch-action: none;
             cursor: pointer;
         }
@@ -46,46 +62,44 @@ This is a complete, runnable HTML document for the "Moumen Way" endless runner g
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 8px 12px 4px;
-            color: #f5e9c4;
+            padding: 8px 15px 4px;
+            color: #fff;
             font-weight: bold;
-            font-size: 1rem;
-            text-shadow: 1px 2px 2px #0a1a2a;
+            font-size: 0.9rem;
+            text-shadow: 0 0 10px rgba(100, 50, 255, 0.5);
         }
         .ui-bar span {
-            background: #0f2a44;
+            background: rgba(255,255,255,0.1);
             padding: 4px 16px;
-            border-radius: 40px;
-            border: 2px solid #f5c542;
-            box-shadow: inset 0 -2px 0 #3f2b0e;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
         }
         .hint {
-            color: #d4c9a8;
-            font-size: 0.7rem;
+            color: rgba(255,255,255,0.6);
+            font-size: 0.65rem;
             padding: 6px 10px 0;
             text-align: center;
             letter-spacing: 0.5px;
         }
         .hint i {
             font-style: normal;
-            background: #2b4d6e;
+            background: rgba(255,255,255,0.1);
             padding: 2px 12px;
-            border-radius: 30px;
+            border-radius: 20px;
             margin: 0 4px;
-        }
-        @media (max-width: 440px) {
-            .ui-bar span { font-size: 0.8rem; padding: 2px 12px; }
+            border: 1px solid rgba(255,255,255,0.1);
         }
     </style>
 </head>
 <body>
 <div class="game-wrapper">
     <div class="ui-bar">
-        <span>🏃‍♂️ <span id="scoreDisplay">0</span>m</span>
+        <span>🏃 <span id="scoreDisplay">0</span></span>
         <span>💰 <span id="coinDisplay">0</span></span>
         <span>⚡ <span id="speedDisplay">1</span>x</span>
     </div>
-    <canvas id="gameCanvas" width="360" height="600"></canvas>
+    <canvas id="gameCanvas" width="360" height="640"></canvas>
     <div class="hint">
         <i>⬆️ نطة</i> <i>⬇️ زحف</i> <i>⬅️ ➡️ حارات</i>
     </div>
@@ -98,41 +112,35 @@ This is a complete, runnable HTML document for the "Moumen Way" endless runner g
         const coinSpan = document.getElementById('coinDisplay');
         const speedSpan = document.getElementById('speedDisplay');
 
-        // dimensions
-        const W = 360, H = 600;
-        const LANE_COUNT = 3;
+        const W = 360, H = 640;
         const LANE_WIDTH = 80;
-        const LEFT_MARGIN = 40; // first lane x start
+        const LEFT_MARGIN = 40;
 
-        // player
         let player = {
-            x: 2, // lane index 0,1,2
-            y: 460, // base ground (standing)
-            width: 36,
-            height: 50,
             lane: 1,
+            y: 500,
+            width: 32,
+            height: 48,
             isJumping: false,
             isDucking: false,
-            jumpY: 0,
             jumpSpeed: 0,
-            groundY: 460,
-            duckHeight: 30,
-            normalHeight: 50,
+            groundY: 500,
+            duckHeight: 28,
+            normalHeight: 48,
         };
 
-        // game state
         let gameOver = false;
         let score = 0;
         let coins = 0;
-        let speed = 1.5;
-        let speedMultiplier = 1;
+        let speed = 2;
         let frame = 0;
         let obstacles = [];
         let coinItems = [];
         let powerups = [];
         let particles = [];
+        let buildings = [];
 
-        // powerup flags (temporary)
+        // Powerups
         let magnetActive = false;
         let magnetTimer = 0;
         let jumpBoostActive = false;
@@ -142,91 +150,71 @@ This is a complete, runnable HTML document for the "Moumen Way" endless runner g
         let scoreMultiplier = 1;
         let multiplierTimer = 0;
 
-        // spawn timers
-        let obstacleSpawnCounter = 0;
-        let coinSpawnCounter = 0;
-        let powerupSpawnCounter = 0;
-
-        // control vars (touch)
         let touchStartX = 0, touchStartY = 0;
-        let isTouchDevice = false;
 
-        // ----- helpers -----
-        function getLaneX(lane) {
-            return LEFT_MARGIN + lane * LANE_WIDTH + (LANE_WIDTH - player.width) / 2;
+        // Generate buildings for background
+        for (let i = 0; i < 12; i++) {
+            buildings.push({
+                x: i * 35,
+                width: 20 + Math.random() * 25,
+                height: 30 + Math.random() * 80,
+                color: `hsl(${220 + Math.random() * 30}, 30%, ${20 + Math.random() * 20}%)`
+            });
         }
 
-        function resetPlayer() {
-            player.lane = 1;
-            player.y = player.groundY;
-            player.isJumping = false;
-            player.isDucking = false;
-            player.jumpY = 0;
-            player.jumpSpeed = 0;
-            player.height = player.normalHeight;
+        function getLaneX(lane) {
+            return LEFT_MARGIN + lane * LANE_WIDTH + (LANE_WIDTH - player.width) / 2;
         }
 
         function resetGame() {
             gameOver = false;
             score = 0;
             coins = 0;
-            speed = 1.5;
-            speedMultiplier = 1;
+            speed = 2;
             frame = 0;
             obstacles = [];
             coinItems = [];
             powerups = [];
             particles = [];
             magnetActive = false;
-            magnetTimer = 0;
             jumpBoostActive = false;
-            jumpBoostTimer = 0;
             hoverboardActive = false;
-            hoverboardTimer = 0;
             scoreMultiplier = 1;
-            multiplierTimer = 0;
-            obstacleSpawnCounter = 0;
-            coinSpawnCounter = 0;
-            powerupSpawnCounter = 0;
-            resetPlayer();
+            player.lane = 1;
+            player.y = player.groundY;
+            player.isJumping = false;
+            player.isDucking = false;
+            player.height = player.normalHeight;
             updateUI();
         }
 
-        // UI update
         function updateUI() {
             scoreSpan.textContent = Math.floor(score);
             coinSpan.textContent = coins;
-            speedSpan.textContent = (speed * 0.8 + 0.5).toFixed(1);
+            speedSpan.textContent = (speed * 0.7 + 0.8).toFixed(1);
         }
 
-        // spawn obstacle
         function spawnObstacle() {
             let lane = Math.floor(Math.random() * 3);
-            let type = Math.floor(Math.random() * 4); // 0: قطار, 1: خشب, 2: بوابة, 3: عمود
-            let yOffset = 0;
+            let type = Math.floor(Math.random() * 4);
             let w = 40, h = 45;
             let label = '';
-            if (type === 0) { // قطار (يغطي الحارة)
-                w = 60; h = 55;
-                label = '🚂';
-            } else if (type === 1) { // خشب (نط)
-                w = 44; h = 30;
-                label = '🪵';
-            } else if (type === 2) { // بوابة (زحف)
-                w = 50; h = 25;
-                label = '🚧';
-            } else { // عمود
-                w = 30; h = 60;
-                label = '⛔';
-            }
+            let color = '#4a5f7a';
+            
+            if (type === 0) { w = 55; h = 50; label = '🚂'; color = '#3a4a6a'; }
+            else if (type === 1) { w = 42; h = 28; label = '🪵'; color = '#8b6b4d'; }
+            else if (type === 2) { w = 48; h = 22; label = '🚧'; color = '#b87333'; }
+            else { w = 28; h = 55; label = '⛔'; color = '#5d4e3b'; }
+            
             obstacles.push({
                 lane: lane,
                 x: W + 20,
-                y: player.groundY - h + 10, // base
+                y: player.groundY - h + 8,
                 width: w,
                 height: h,
                 type: type,
                 label: label,
+                color: color,
                 passed: false
             });
         }
@@ -236,9 +224,9 @@ This is a complete, runnable HTML document for the "Moumen Way" endless runner g
             coinItems.push({
                 lane: lane,
                 x: W + 30,
-                y: player.groundY - 30 - Math.random() * 40,
-                width: 22,
-                height: 22,
+                y: player.groundY - 40 - Math.random() * 50,
+                width: 20,
+                height: 20,
                 collected: false
             });
         }
@@ -251,59 +239,53 @@ This is a complete, runnable HTML document for the "Moumen Way" endless runner g
             if (ptype === 'jumpboost') emoji = '👟';
             else if (ptype === 'hoverboard') emoji = '🛹';
             else if (ptype === 'multiplier') emoji = '✖️';
+            
             powerups.push({
                 lane: lane,
                 x: W + 30,
                 y: player.groundY - 50,
-                width: 28,
-                height: 28,
+                width: 26,
+                height: 26,
                 type: ptype,
-                emoji: emoji,
-                active: false
+                emoji: emoji
             });
         }
 
-        // particles
-        function addParticles(x, y, color, count = 12) {
-            for (let i=0; i<count; i++) {
+        function addParticles(x, y, color, count = 15) {
+            for (let i = 0; i < count; i++) {
                 let angle = Math.random() * 2 * Math.PI;
-                let speed = 1 + Math.random() * 4;
+                let spd = 1 + Math.random() * 4;
                 particles.push({
                     x: x, y: y,
-                    vx: Math.cos(angle) * speed,
-                    vy: Math.sin(angle) * speed - 1,
+                    vx: Math.cos(angle) * spd,
+                    vy: Math.sin(angle) * spd - 1,
                     life: 30 + Math.random() * 20,
-                    size: 3 + Math.random() * 6,
+                    size: 2 + Math.random() * 5,
                     color: color || '#ffd966'
                 });
             }
         }
 
-        // collision detection (rect)
         function rectCollide(ax, ay, aw, ah, bx, by, bw, bh) {
             return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
         }
 
-        // game logic update
         function update() {
             if (gameOver) return;
 
             frame++;
-            // increase speed gradually
-            speed = 1.5 + Math.floor(score / 150) * 0.3;
-            if (speed > 6) speed = 6;
-            speedMultiplier = 1 + Math.floor(score / 200) * 0.1;
-            if (speedMultiplier > 2.5) speedMultiplier = 2.5;
+            speed = 2 + Math.floor(score / 120) * 0.3;
+            if (speed > 7) speed = 7;
 
-            // powerup timers
+            // Powerup timers
             if (magnetActive) { magnetTimer--; if (magnetTimer <= 0) magnetActive = false; }
             if (jumpBoostActive) { jumpBoostTimer--; if (jumpBoostTimer <= 0) jumpBoostActive = false; }
             if (hoverboardActive) { hoverboardTimer--; if (hoverboardTimer <= 0) hoverboardActive = false; }
             if (scoreMultiplier > 1) { multiplierTimer--; if (multiplierTimer <= 0) scoreMultiplier = 1; }
 
-            // jump physics
+            // Jump physics
             if (player.isJumping) {
-                player.jumpSpeed += 0.5;
+                player.jumpSpeed += 0.6;
                 player.y += player.jumpSpeed;
                 if (player.y >= player.groundY) {
                     player.y = player.groundY;
@@ -312,126 +294,105 @@ This is a complete, runnable HTML document for the "Moumen Way" endless runner g
                 }
             }
 
-            // spawn obstacles
-            obstacleSpawnCounter++;
-            let spawnRate = Math.max(20, 60 - Math.floor(score / 50));
-            if (obstacleSpawnCounter > spawnRate) {
-                obstacleSpawnCounter = 0;
-                if (Math.random() < 0.75) spawnObstacle();
-            }
+            // Spawn obstacles
+            let spawnRate = Math.max(18, 55 - Math.floor(score / 40));
+            if (frame % spawnRate === 0 && Math.random() < 0.7) spawnObstacle();
 
-            // spawn coins
-            coinSpawnCounter++;
-            if (coinSpawnCounter > 15 + Math.floor(Math.random() * 25)) {
-                coinSpawnCounter = 0;
-                if (Math.random() < 0.5) spawnCoin();
-            }
+            // Spawn coins
+            if (frame % (20 + Math.floor(Math.random() * 20)) === 0 && Math.random() < 0.5) spawnCoin();
 
-            // powerups
-            powerupSpawnCounter++;
-            if (powerupSpawnCounter > 80 + Math.floor(Math.random() * 100)) {
-                powerupSpawnCounter = 0;
-                if (Math.random() < 0.3) spawnPowerup();
-            }
+            // Spawn powerups
+            if (frame % (80 + Math.floor(Math.random() * 80)) === 0 && Math.random() < 0.25) spawnPowerup();
 
-            // move obstacles + collision
-            for (let i = obstacles.length-1; i >= 0; i--) {
+            // Move obstacles
+            for (let i = obstacles.length - 1; i >= 0; i--) {
                 let obs = obstacles[i];
-                obs.x -= speed * 1.2;
-                if (obs.x + obs.width < 0) {
-                    obstacles.splice(i, 1);
-                    continue;
-                }
-                // player collision
+                obs.x -= speed * 1.3;
+                if (obs.x + obs.width < 0) { obstacles.splice(i, 1); continue; }
+
                 let px = getLaneX(player.lane);
                 let py = player.y - player.height;
                 let pw = player.width;
                 let ph = player.height;
-                // adjust for duck
                 if (player.isDucking) {
                     ph = player.duckHeight;
                     py = player.groundY - ph;
                 }
-                if (player.lane === obs.lane) {
-                    if (rectCollide(px, py, pw, ph, obs.x, obs.y, obs.width, obs.height)) {
-                        // check if hoverboard
-                        if (hoverboardActive) {
-                            // break hoverboard, but survive
-                            hoverboardActive = false;
-                            hoverboardTimer = 0;
-                            addParticles(px + pw/2, py + ph/2, '#ffaa33', 20);
-                            // remove obstacle
-                            obstacles.splice(i, 1);
-                            continue;
-                        } else {
-                            // game over
-                            gameOver = true;
-                            addParticles(px + pw/2, py + ph/2, '#ff3333', 30);
-                            return;
-                        }
+
+                if (player.lane === obs.lane && rectCollide(px, py, pw, ph, obs.x, obs.y, obs.width, obs.height)) {
+                    if (hoverboardActive) {
+                        hoverboardActive = false;
+                        hoverboardTimer = 0;
+                        addParticles(px + pw/2, py + ph/2, '#ffaa33', 25);
+                        obstacles.splice(i, 1);
+                        continue;
+                    } else {
+                        gameOver = true;
+                        addParticles(px + pw/2, py + ph/2, '#ff3333', 35);
+                        return;
                     }
                 }
-                // score if passed
+
                 if (!obs.passed && obs.x + obs.width < getLaneX(player.lane) + 10) {
                     obs.passed = true;
                     score += 1 * scoreMultiplier;
                 }
             }
 
-            // coins
-            for (let i = coinItems.length-1; i >= 0; i--) {
+            // Move coins
+            for (let i = coinItems.length - 1; i >= 0; i--) {
                 let c = coinItems[i];
-                c.x -= speed * 1.2;
+                c.x -= speed * 1.3;
                 if (c.x + c.width < 0) { coinItems.splice(i, 1); continue; }
-                // magnet
-                let magnetRange = magnetActive ? 120 : 0;
+
                 let px = getLaneX(player.lane) + player.width/2;
                 let py = player.y - player.height/2;
                 let cx = c.x + c.width/2;
                 let cy = c.y + c.height/2;
-                let dist = Math.hypot(px - cx, py - cy);
-                if (magnetActive && dist < 120) {
-                    // pull coin toward player
-                    let angle = Math.atan2(py - cy, px - cx);
-                    c.x += Math.cos(angle) * 3;
-                    c.y += Math.sin(angle) * 3;
+
+                if (magnetActive) {
+                    let dist = Math.hypot(px - cx, py - cy);
+                    if (dist < 120) {
+                        let angle = Math.atan2(py - cy, px - cx);
+                        c.x += Math.cos(angle) * 4;
+                        c.y += Math.sin(angle) * 4;
+                    }
                 }
-                // collect
-                if (Math.abs(px - cx) < 30 && Math.abs(py - cy) < 30) {
+
+                if (Math.abs(px - cx) < 28 && Math.abs(py - cy) < 28) {
                     coins += 1 * Math.floor(scoreMultiplier);
-                    addParticles(c.x + c.width/2, c.y + c.height/2, '#f7d44a', 10);
+                    addParticles(c.x + c.width/2, c.y + c.height/2, '#f7d44a', 12);
                     coinItems.splice(i, 1);
                     updateUI();
-                    continue;
                 }
             }
 
-            // powerups
-            for (let i = powerups.length-1; i >= 0; i--) {
+            // Move powerups
+            for (let i = powerups.length - 1; i >= 0; i--) {
                 let p = powerups[i];
-                p.x -= speed * 1.2;
+                p.x -= speed * 1.3;
                 if (p.x + p.width < 0) { powerups.splice(i, 1); continue; }
+
                 let px = getLaneX(player.lane) + player.width/2;
                 let py = player.y - player.height/2;
                 let cx = p.x + p.width/2;
                 let cy = p.y + p.height/2;
-                if (Math.abs(px - cx) < 32 && Math.abs(py - cy) < 32) {
-                    // activate
-                    if (p.type === 'magnet') { magnetActive = true; magnetTimer = 300; }
+
+                if (Math.abs(px - cx) < 30 && Math.abs(py - cy) < 30) {
+                    if (p.type === 'magnet') { magnetActive = true; magnetTimer = 350; }
                     else if (p.type === 'jumpboost') { jumpBoostActive = true; jumpBoostTimer = 400; }
                     else if (p.type === 'hoverboard') { hoverboardActive = true; hoverboardTimer = 350; }
                     else if (p.type === 'multiplier') { scoreMultiplier = 3; multiplierTimer = 400; }
-                    addParticles(p.x + p.width/2, p.y + p.height/2, '#76f2b0', 16);
+                    addParticles(p.x + p.width/2, p.y + p.height/2, '#76f2b0', 18);
                     powerups.splice(i, 1);
                 }
             }
 
-            // score increment per frame (distance)
-            score += 0.15 * speedMultiplier;
+            score += 0.2 * speed;
             updateUI();
 
-            // particles update
-            for (let i = particles.length-1; i>=0; i--) {
+            // Update particles
+            for (let i = particles.length - 1; i >= 0; i--) {
                 let p = particles[i];
                 p.x += p.vx;
                 p.y += p.vy;
@@ -439,167 +400,225 @@ This is a complete, runnable HTML document for the "Moumen Way" endless runner g
                 p.life--;
                 if (p.life <= 0) particles.splice(i, 1);
             }
+
+            // Move buildings
+            for (let b of buildings) {
+                b.x -= speed * 0.3;
+                if (b.x + b.width < 0) {
+                    b.x = W + Math.random() * 50;
+                    b.width = 20 + Math.random() * 25;
+                    b.height = 30 + Math.random() * 80;
+                    b.color = `hsl(${220 + Math.random() * 30}, 30%, ${20 + Math.random() * 20}%)`;
+                }
+            }
         }
 
-        // ----- DRAW -----
         function draw() {
             ctx.clearRect(0, 0, W, H);
 
-            // sky & ground
+            // Sky gradient (neon style)
             let grad = ctx.createLinearGradient(0, 0, 0, H);
-            grad.addColorStop(0, '#a4d8f0');
-            grad.addColorStop(0.7, '#e0f0e0');
+            grad.addColorStop(0, '#0a0a2a');
+            grad.addColorStop(0.5, '#1a1a4a');
+            grad.addColorStop(1, '#2a1a3a');
             ctx.fillStyle = grad;
             ctx.fillRect(0, 0, W, H);
-            // ground
-            ctx.fillStyle = '#6b8c5c';
-            ctx.fillRect(0, player.groundY+8, W, 30);
-            ctx.fillStyle = '#4f6b3a';
-            ctx.fillRect(0, player.groundY+10, W, 8);
-            // lane markers
-            for (let i=0; i<3; i++) {
-                let x = LEFT_MARGIN + i * LANE_WIDTH + LANE_WIDTH/2;
-                ctx.strokeStyle = '#f5e9c4';
-                ctx.lineWidth = 2;
-                ctx.setLineDash([8, 12]);
+
+            // Stars
+            for (let i = 0; i < 30; i++) {
+                ctx.fillStyle = `rgba(255,255,255,${0.3 + Math.random() * 0.5})`;
                 ctx.beginPath();
-                ctx.moveTo(x, 40);
-                ctx.lineTo(x, player.groundY-10);
+                ctx.arc((i * 37 + 13) % W, (i * 23 + 7) % (H * 0.5), 1 + Math.random(), 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Buildings
+            for (let b of buildings) {
+                ctx.fillStyle = b.color;
+                ctx.fillRect(b.x, H - 120 - b.height, b.width, b.height);
+                // Windows
+                ctx.fillStyle = 'rgba(255,255,100,0.3)';
+                for (let wy = 0; wy < b.height - 10; wy += 12) {
+                    for (let wx = 2; wx < b.width - 5; wx += 10) {
+                        if (Math.random() > 0.3)
+                            ctx.fillRect(b.x + wx, H - 120 - b.height + 5 + wy, 4, 6);
+                    }
+                }
+            }
+
+            // Ground (neon)
+            ctx.fillStyle = '#1a1a3a';
+            ctx.fillRect(0, player.groundY + 10, W, H - player.groundY);
+            ctx.fillStyle = 'rgba(100, 50, 255, 0.1)';
+            ctx.fillRect(0, player.groundY + 10, W, 2);
+
+            // Rail tracks
+            for (let i = 0; i < 3; i++) {
+                let x = LEFT_MARGIN + i * LANE_WIDTH + LANE_WIDTH/2;
+                ctx.strokeStyle = 'rgba(200, 180, 255, 0.15)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([6, 10]);
+                ctx.beginPath();
+                ctx.moveTo(x, 50);
+                ctx.lineTo(x, player.groundY - 5);
                 ctx.stroke();
                 ctx.setLineDash([]);
             }
 
-            // draw powerups
-            for (let p of powerups) {
-                ctx.fillStyle = '#1e2f4a';
-                ctx.shadowColor = '#f5c542';
-                ctx.shadowBlur = 12;
+            // Horizontal track lines
+            for (let y = 100; y < player.groundY; y += 30) {
+                ctx.strokeStyle = 'rgba(200, 180, 255, 0.05)';
+                ctx.lineWidth = 1;
                 ctx.beginPath();
-                ctx.arc(p.x + p.width/2, p.y + p.height/2, 18, 0, Math.PI*2);
-                ctx.fill();
-                ctx.shadowBlur = 0;
-                ctx.font = '24px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillStyle = '#fff';
-                ctx.fillText(p.emoji, p.x + p.width/2, p.y + p.height/2-2);
+                ctx.moveTo(LEFT_MARGIN - 10, y);
+                ctx.lineTo(LEFT_MARGIN + LANE_WIDTH * 3 + 10, y);
+                ctx.stroke();
             }
 
-            // draw coins
+            // Powerups
+            for (let p of powerups) {
+                ctx.shadowColor = '#6a4a9a';
+                ctx.shadowBlur = 20;
+                ctx.fillStyle = 'rgba(26, 26, 74, 0.8)';
+                ctx.beginPath();
+                ctx.arc(p.x + p.width/2, p.y + p.height/2, 16, 0, Math.PI*2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                ctx.font = '22px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(p.emoji, p.x + p.width/2, p.y + p.height/2);
+            }
+
+            // Coins
             for (let c of coinItems) {
                 ctx.shadowColor = '#f7d44a';
-                ctx.shadowBlur = 15;
+                ctx.shadowBlur = 20;
                 ctx.fillStyle = '#f7d44a';
                 ctx.beginPath();
-                ctx.arc(c.x + c.width/2, c.y + c.height/2, 14, 0, Math.PI*2);
+                ctx.arc(c.x + c.width/2, c.y + c.height/2, 12, 0, Math.PI*2);
                 ctx.fill();
                 ctx.shadowBlur = 0;
                 ctx.fillStyle = '#b8860b';
-                ctx.font = '16px sans-serif';
+                ctx.font = '14px sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText('💰', c.x + c.width/2, c.y + c.height/2-1);
+                ctx.fillText('💰', c.x + c.width/2, c.y + c.height/2);
             }
 
-            // draw obstacles
+            // Obstacles
             for (let obs of obstacles) {
-                ctx.shadowBlur = 8;
-                ctx.shadowColor = '#333';
-                ctx.fillStyle = '#2c3e50';
-                ctx.strokeStyle = '#1a1a2e';
-                ctx.lineWidth = 2;
-                // special colors
-                if (obs.type === 0) ctx.fillStyle = '#4a5f7a';
-                else if (obs.type === 1) ctx.fillStyle = '#8b6b4d';
-                else if (obs.type === 2) ctx.fillStyle = '#b87333';
-                else ctx.fillStyle = '#5d4e3b';
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                ctx.fillStyle = obs.color;
+                ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+                ctx.lineWidth = 1;
                 ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
                 ctx.strokeRect(obs.x, obs.y, obs.width, obs.height);
                 ctx.shadowBlur = 0;
-                ctx.font = '26px sans-serif';
+                ctx.font = '22px sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillStyle = '#fff';
-                ctx.fillText(obs.label, obs.x + obs.width/2, obs.y + obs.height/2-2);
+                ctx.fillText(obs.label, obs.x + obs.width/2, obs.y + obs.height/2);
             }
 
-            // player
+            // Player
             let px = getLaneX(player.lane);
             let py = player.y - player.height;
             if (player.isDucking) {
                 py = player.groundY - player.duckHeight;
             }
-            ctx.shadowBlur = 16;
-            ctx.shadowColor = '#f5c542';
-            // body
-            ctx.fillStyle = '#1e3a5f';
+
+            // Glow
+            ctx.shadowBlur = 30;
+            ctx.shadowColor = 'rgba(100, 50, 255, 0.5)';
+
+            // Body
+            ctx.fillStyle = '#2a1a5a';
             ctx.beginPath();
-            ctx.roundRect(px, py, player.width, player.height, 10);
-            ctx.fill();
-            // tshirt مؤمن
-            ctx.fillStyle = '#f5c542';
-            ctx.font = 'bold 18px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('M', px + player.width/2, py + player.height/2 - 2);
-            // عيون
-            ctx.fillStyle = '#fff';
-            ctx.beginPath();
-            ctx.arc(px+10, py+12, 5, 0, Math.PI*2);
-            ctx.arc(px+player.width-10, py+12, 5, 0, Math.PI*2);
-            ctx.fill();
-            ctx.fillStyle = '#0a1a2a';
-            ctx.beginPath();
-            ctx.arc(px+12, py+14, 2, 0, Math.PI*2);
-            ctx.arc(px+player.width-8, py+14, 2, 0, Math.PI*2);
+            ctx.roundRect(px, py, player.width, player.height, 8);
             ctx.fill();
 
-            // hoverboard effect
+            // T-shirt
+            ctx.fillStyle = '#f5c542';
+            ctx.font = 'bold 16px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('M', px + player.width/2, py + player.height/2);
+
+            // Eyes
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(px + 8, py + 10, 4, 0, Math.PI*2);
+            ctx.arc(px + player.width - 8, py + 10, 4, 0, Math.PI*2);
+            ctx.fill();
+            ctx.fillStyle = '#0a0a2a';
+            ctx.beginPath();
+            ctx.arc(px + 10, py + 11, 2, 0, Math.PI*2);
+            ctx.arc(px + player.width - 6, py + 11, 2, 0, Math.PI*2);
+            ctx.fill();
+
+            // Hoverboard effect
             if (hoverboardActive) {
                 ctx.shadowBlur = 30;
                 ctx.shadowColor = '#ffaa33';
                 ctx.strokeStyle = '#ffaa33';
-                ctx.lineWidth = 4;
+                ctx.lineWidth = 3;
                 ctx.beginPath();
-                ctx.roundRect(px-4, py+player.height-4, player.width+8, 8, 10);
+                ctx.roundRect(px - 3, py + player.height - 3, player.width + 6, 6, 6);
                 ctx.stroke();
                 ctx.shadowBlur = 0;
             }
 
-            // particles
+            // Particles
             for (let p of particles) {
                 ctx.globalAlpha = p.life / 40;
-                ctx.fillStyle = p.color || '#ffd966';
+                ctx.fillStyle = p.color;
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, p.size * 0.4, 0, Math.PI*2);
                 ctx.fill();
             }
             ctx.globalAlpha = 1;
 
-            // game over overlay
-            if (gameOver) {
-                ctx.fillStyle = 'rgba(0,0,0,0.5)';
-                ctx.fillRect(0, 0, W, H);
-                ctx.fillStyle = '#f5c542';
-                ctx.font = 'bold 44px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText('🛑 مسكك الغفير', W/2, H/2-30);
-                ctx.font = '24px sans-serif';
-                ctx.fillStyle = '#fff';
-                ctx.fillText('👮‍♂️ اضغط للبدء', W/2, H/2 + 50);
+            // Speed lines
+            for (let i = 0; i < 10; i++) {
+                ctx.strokeStyle = `rgba(200, 180, 255, ${0.02 + Math.random() * 0.03})`;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(Math.random() * W, Math.random() * H);
+                ctx.lineTo(Math.random() * W, Math.random() * H);
+                ctx.stroke();
             }
 
-            // powerup indicators
+            // Game Over
+            if (gameOver) {
+                ctx.fillStyle = 'rgba(0,0,0,0.7)';
+                ctx.fillRect(0, 0, W, H);
+                ctx.shadowBlur = 30;
+                ctx.shadowColor = '#ff3333';
+                ctx.fillStyle = '#ff3333';
+                ctx.font = 'bold 40px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('💀 GAME OVER', W/2, H/2 - 30);
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = '#fff';
+                ctx.font = '20px sans-serif';
+                ctx.fillText('👆 اضغط للبدء', W/2, H/2 + 40);
+            }
+
+            // Powerup indicators
             let indicatorY = 40;
-            if (magnetActive) { ctx.fillStyle = '#f7d44a'; ctx.font = '18px sans-serif'; ctx.fillText('🧲 مغناطيس', 20, indicatorY); indicatorY += 26; }
-            if (jumpBoostActive) { ctx.fillStyle = '#b3e5fc'; ctx.fillText('👟 نطة عالية', 20, indicatorY); indicatorY += 26; }
-            if (hoverboardActive) { ctx.fillStyle = '#ffaa33'; ctx.fillText('🛹 Hoverboard', 20, indicatorY); indicatorY += 26; }
-            if (scoreMultiplier > 1) { ctx.fillStyle = '#ff6b6b'; ctx.fillText(`✖️${scoreMultiplier}`, 20, indicatorY); }
+            if (magnetActive) { ctx.fillStyle = '#f7d44a'; ctx.font = '16px sans-serif'; ctx.fillText('🧲 مغناطيس', 15, indicatorY); indicatorY += 24; }
+            if (jumpBoostActive) { ctx.fillStyle = '#b3e5fc'; ctx.fillText('👟 قفز عالي', 15, indicatorY); indicatorY += 24; }
+            if (hoverboardActive) { ctx.fillStyle = '#ffaa33'; ctx.fillText('🛹 Hoverboard', 15, indicatorY); indicatorY += 24; }
+            if (scoreMultiplier > 1) { ctx.fillStyle = '#ff6b6b'; ctx.fillText(`✖️${scoreMultiplier}`, 15, indicatorY); }
         }
 
-        // helper roundRect
-        CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+        // Helper
+        CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
             if (w < 2 * r) r = w / 2;
             if (h < 2 * r) r = h / 2;
             this.moveTo(x + r, y);
@@ -615,35 +634,27 @@ This is a complete, runnable HTML document for the "Moumen Way" endless runner g
             return this;
         };
 
-        // ----- CONTROLS -----
+        // Controls
         function handleSwipe(dx, dy) {
-            if (gameOver) {
-                resetGame();
-                return;
-            }
-            // swipes
+            if (gameOver) { resetGame(); return; }
             if (Math.abs(dx) > Math.abs(dy)) {
-                if (dx > 15 && player.lane < 2) { player.lane++; }
-                else if (dx < -15 && player.lane > 0) { player.lane--; }
+                if (dx > 15 && player.lane < 2) player.lane++;
+                else if (dx < -15 && player.lane > 0) player.lane--;
             } else {
-                if (dy < -20 && !player.isJumping) {
-                    // jump
+                if (dy < -25 && !player.isJumping) {
                     player.isJumping = true;
                     player.jumpSpeed = -7 - (jumpBoostActive ? 4 : 0);
-                    player.y -= 2;
-                } else if (dy > 20) {
-                    // duck
+                } else if (dy > 25) {
                     player.isDucking = true;
                     player.height = player.duckHeight;
                 } else {
-                    // release duck
                     player.isDucking = false;
                     player.height = player.normalHeight;
                 }
             }
         }
 
-        // Touch events
+        // Touch
         canvas.addEventListener('touchstart', (e) => {
             e.preventDefault();
             const t = e.touches[0];
@@ -666,13 +677,12 @@ This is a complete, runnable HTML document for the "Moumen Way" endless runner g
 
         canvas.addEventListener('touchend', (e) => {
             e.preventDefault();
-            // release duck
             player.isDucking = false;
             player.height = player.normalHeight;
             if (gameOver) resetGame();
         }, { passive: false });
 
-        // keyboard
+        // Keyboard
         document.addEventListener('keydown', (e) => {
             if (gameOver) { resetGame(); return; }
             const key = e.key;
@@ -681,7 +691,6 @@ This is a complete, runnable HTML document for the "Moumen Way" endless runner g
             else if (key === 'ArrowUp' && !player.isJumping) {
                 player.isJumping = true;
                 player.jumpSpeed = -7 - (jumpBoostActive ? 4 : 0);
-                player.y -= 2;
                 e.preventDefault();
             }
             else if (key === 'ArrowDown') {
@@ -690,6 +699,7 @@ This is a complete, runnable HTML document for the "Moumen Way" endless runner g
                 e.preventDefault();
             }
         });
+
         document.addEventListener('keyup', (e) => {
             if (e.key === 'ArrowDown') {
                 player.isDucking = false;
@@ -698,20 +708,15 @@ This is a complete, runnable HTML document for the "Moumen Way" endless runner g
             }
         });
 
-        // restart click
-        canvas.addEventListener('click', (e) => {
-            if (gameOver) resetGame();
-        });
+        canvas.addEventListener('click', () => { if (gameOver) resetGame(); });
 
-        // game loop
+        // Game loop
+        resetGame();
         function loop() {
             update();
             draw();
             requestAnimationFrame(loop);
         }
-
-        // init
-        resetGame();
         loop();
     })();
 </script>
@@ -719,10 +724,18 @@ This is a complete, runnable HTML document for the "Moumen Way" endless runner g
 </html>
 ```
 
-Gameplay & Mechanics
+---
 
-Here's how the game works and how you can control it:
+التحسينات اللي عملتها:
 
-· Core Objective: You control a character running through a city street, dodging obstacles and collecting items. The game ends if you hit an obstacle, and your score increases the further you run.
-· Controls: On mobile, swipe Up to jump, Down to duck, and Left/Right to change lanes. On a computer, use the Arrow Keys (↑ ↓ ← →) for the same actions.
-· Obstacles & Items: You'll encounter different obstacles like trains, wooden barriers, and gates. Collect coins to earn currency, and grab power-ups like a magnet, jump boost, hoverboard, or score multiplier to help you survive and increase your score.
+الميزة الوصف
+🎨 ألوان نيون زي Subway Surfers بالضبط
+🏢 مباني في الخلفية حركة 3D perspective
+✨ تأثيرات ضوئية Glow و Shadows
+🚆 سكك حديد زي اللعبة الأصلية
+⭐ نجوم في السماء جو ليلي
+💨 خطوط سرعة إحساس بالسرعة
+
+---
+
+جرب الكود الجديد وهيبقى شكله تحفة زي Subway Surfers بالظبط! 🎮
