@@ -1,0 +1,728 @@
+This is a complete, runnable HTML document for the "Moumen Way" endless runner game. You can save and open it in your browser to play.
+
+```html
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>طريق مؤمن - Moumen Way</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+        body {
+            background: #0b1a2f;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            touch-action: none;
+        }
+        .game-wrapper {
+            background: #1e3a5f;
+            padding: 12px 12px 20px;
+            border-radius: 40px 40px 20px 20px;
+            box-shadow: 0 20px 30px rgba(0,0,0,0.7);
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            max-width: 400px;
+            height: auto;
+            aspect-ratio: 360 / 600;
+            background: #87CEEB;
+            border-radius: 28px;
+            margin: 0 auto;
+            box-shadow: inset 0 0 0 3px #f5c542, 0 10px 15px rgba(0,0,0,0.5);
+            touch-action: none;
+            cursor: pointer;
+        }
+        .ui-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px 4px;
+            color: #f5e9c4;
+            font-weight: bold;
+            font-size: 1rem;
+            text-shadow: 1px 2px 2px #0a1a2a;
+        }
+        .ui-bar span {
+            background: #0f2a44;
+            padding: 4px 16px;
+            border-radius: 40px;
+            border: 2px solid #f5c542;
+            box-shadow: inset 0 -2px 0 #3f2b0e;
+        }
+        .hint {
+            color: #d4c9a8;
+            font-size: 0.7rem;
+            padding: 6px 10px 0;
+            text-align: center;
+            letter-spacing: 0.5px;
+        }
+        .hint i {
+            font-style: normal;
+            background: #2b4d6e;
+            padding: 2px 12px;
+            border-radius: 30px;
+            margin: 0 4px;
+        }
+        @media (max-width: 440px) {
+            .ui-bar span { font-size: 0.8rem; padding: 2px 12px; }
+        }
+    </style>
+</head>
+<body>
+<div class="game-wrapper">
+    <div class="ui-bar">
+        <span>🏃‍♂️ <span id="scoreDisplay">0</span>m</span>
+        <span>💰 <span id="coinDisplay">0</span></span>
+        <span>⚡ <span id="speedDisplay">1</span>x</span>
+    </div>
+    <canvas id="gameCanvas" width="360" height="600"></canvas>
+    <div class="hint">
+        <i>⬆️ نطة</i> <i>⬇️ زحف</i> <i>⬅️ ➡️ حارات</i>
+    </div>
+</div>
+<script>
+    (function(){
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreSpan = document.getElementById('scoreDisplay');
+        const coinSpan = document.getElementById('coinDisplay');
+        const speedSpan = document.getElementById('speedDisplay');
+
+        // dimensions
+        const W = 360, H = 600;
+        const LANE_COUNT = 3;
+        const LANE_WIDTH = 80;
+        const LEFT_MARGIN = 40; // first lane x start
+
+        // player
+        let player = {
+            x: 2, // lane index 0,1,2
+            y: 460, // base ground (standing)
+            width: 36,
+            height: 50,
+            lane: 1,
+            isJumping: false,
+            isDucking: false,
+            jumpY: 0,
+            jumpSpeed: 0,
+            groundY: 460,
+            duckHeight: 30,
+            normalHeight: 50,
+        };
+
+        // game state
+        let gameOver = false;
+        let score = 0;
+        let coins = 0;
+        let speed = 1.5;
+        let speedMultiplier = 1;
+        let frame = 0;
+        let obstacles = [];
+        let coinItems = [];
+        let powerups = [];
+        let particles = [];
+
+        // powerup flags (temporary)
+        let magnetActive = false;
+        let magnetTimer = 0;
+        let jumpBoostActive = false;
+        let jumpBoostTimer = 0;
+        let hoverboardActive = false;
+        let hoverboardTimer = 0;
+        let scoreMultiplier = 1;
+        let multiplierTimer = 0;
+
+        // spawn timers
+        let obstacleSpawnCounter = 0;
+        let coinSpawnCounter = 0;
+        let powerupSpawnCounter = 0;
+
+        // control vars (touch)
+        let touchStartX = 0, touchStartY = 0;
+        let isTouchDevice = false;
+
+        // ----- helpers -----
+        function getLaneX(lane) {
+            return LEFT_MARGIN + lane * LANE_WIDTH + (LANE_WIDTH - player.width) / 2;
+        }
+
+        function resetPlayer() {
+            player.lane = 1;
+            player.y = player.groundY;
+            player.isJumping = false;
+            player.isDucking = false;
+            player.jumpY = 0;
+            player.jumpSpeed = 0;
+            player.height = player.normalHeight;
+        }
+
+        function resetGame() {
+            gameOver = false;
+            score = 0;
+            coins = 0;
+            speed = 1.5;
+            speedMultiplier = 1;
+            frame = 0;
+            obstacles = [];
+            coinItems = [];
+            powerups = [];
+            particles = [];
+            magnetActive = false;
+            magnetTimer = 0;
+            jumpBoostActive = false;
+            jumpBoostTimer = 0;
+            hoverboardActive = false;
+            hoverboardTimer = 0;
+            scoreMultiplier = 1;
+            multiplierTimer = 0;
+            obstacleSpawnCounter = 0;
+            coinSpawnCounter = 0;
+            powerupSpawnCounter = 0;
+            resetPlayer();
+            updateUI();
+        }
+
+        // UI update
+        function updateUI() {
+            scoreSpan.textContent = Math.floor(score);
+            coinSpan.textContent = coins;
+            speedSpan.textContent = (speed * 0.8 + 0.5).toFixed(1);
+        }
+
+        // spawn obstacle
+        function spawnObstacle() {
+            let lane = Math.floor(Math.random() * 3);
+            let type = Math.floor(Math.random() * 4); // 0: قطار, 1: خشب, 2: بوابة, 3: عمود
+            let yOffset = 0;
+            let w = 40, h = 45;
+            let label = '';
+            if (type === 0) { // قطار (يغطي الحارة)
+                w = 60; h = 55;
+                label = '🚂';
+            } else if (type === 1) { // خشب (نط)
+                w = 44; h = 30;
+                label = '🪵';
+            } else if (type === 2) { // بوابة (زحف)
+                w = 50; h = 25;
+                label = '🚧';
+            } else { // عمود
+                w = 30; h = 60;
+                label = '⛔';
+            }
+            obstacles.push({
+                lane: lane,
+                x: W + 20,
+                y: player.groundY - h + 10, // base
+                width: w,
+                height: h,
+                type: type,
+                label: label,
+                passed: false
+            });
+        }
+
+        function spawnCoin() {
+            let lane = Math.floor(Math.random() * 3);
+            coinItems.push({
+                lane: lane,
+                x: W + 30,
+                y: player.groundY - 30 - Math.random() * 40,
+                width: 22,
+                height: 22,
+                collected: false
+            });
+        }
+
+        function spawnPowerup() {
+            let lane = Math.floor(Math.random() * 3);
+            let types = ['magnet', 'jumpboost', 'hoverboard', 'multiplier'];
+            let ptype = types[Math.floor(Math.random() * types.length)];
+            let emoji = '🧲';
+            if (ptype === 'jumpboost') emoji = '👟';
+            else if (ptype === 'hoverboard') emoji = '🛹';
+            else if (ptype === 'multiplier') emoji = '✖️';
+            powerups.push({
+                lane: lane,
+                x: W + 30,
+                y: player.groundY - 50,
+                width: 28,
+                height: 28,
+                type: ptype,
+                emoji: emoji,
+                active: false
+            });
+        }
+
+        // particles
+        function addParticles(x, y, color, count = 12) {
+            for (let i=0; i<count; i++) {
+                let angle = Math.random() * 2 * Math.PI;
+                let speed = 1 + Math.random() * 4;
+                particles.push({
+                    x: x, y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed - 1,
+                    life: 30 + Math.random() * 20,
+                    size: 3 + Math.random() * 6,
+                    color: color || '#ffd966'
+                });
+            }
+        }
+
+        // collision detection (rect)
+        function rectCollide(ax, ay, aw, ah, bx, by, bw, bh) {
+            return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+        }
+
+        // game logic update
+        function update() {
+            if (gameOver) return;
+
+            frame++;
+            // increase speed gradually
+            speed = 1.5 + Math.floor(score / 150) * 0.3;
+            if (speed > 6) speed = 6;
+            speedMultiplier = 1 + Math.floor(score / 200) * 0.1;
+            if (speedMultiplier > 2.5) speedMultiplier = 2.5;
+
+            // powerup timers
+            if (magnetActive) { magnetTimer--; if (magnetTimer <= 0) magnetActive = false; }
+            if (jumpBoostActive) { jumpBoostTimer--; if (jumpBoostTimer <= 0) jumpBoostActive = false; }
+            if (hoverboardActive) { hoverboardTimer--; if (hoverboardTimer <= 0) hoverboardActive = false; }
+            if (scoreMultiplier > 1) { multiplierTimer--; if (multiplierTimer <= 0) scoreMultiplier = 1; }
+
+            // jump physics
+            if (player.isJumping) {
+                player.jumpSpeed += 0.5;
+                player.y += player.jumpSpeed;
+                if (player.y >= player.groundY) {
+                    player.y = player.groundY;
+                    player.isJumping = false;
+                    player.jumpSpeed = 0;
+                }
+            }
+
+            // spawn obstacles
+            obstacleSpawnCounter++;
+            let spawnRate = Math.max(20, 60 - Math.floor(score / 50));
+            if (obstacleSpawnCounter > spawnRate) {
+                obstacleSpawnCounter = 0;
+                if (Math.random() < 0.75) spawnObstacle();
+            }
+
+            // spawn coins
+            coinSpawnCounter++;
+            if (coinSpawnCounter > 15 + Math.floor(Math.random() * 25)) {
+                coinSpawnCounter = 0;
+                if (Math.random() < 0.5) spawnCoin();
+            }
+
+            // powerups
+            powerupSpawnCounter++;
+            if (powerupSpawnCounter > 80 + Math.floor(Math.random() * 100)) {
+                powerupSpawnCounter = 0;
+                if (Math.random() < 0.3) spawnPowerup();
+            }
+
+            // move obstacles + collision
+            for (let i = obstacles.length-1; i >= 0; i--) {
+                let obs = obstacles[i];
+                obs.x -= speed * 1.2;
+                if (obs.x + obs.width < 0) {
+                    obstacles.splice(i, 1);
+                    continue;
+                }
+                // player collision
+                let px = getLaneX(player.lane);
+                let py = player.y - player.height;
+                let pw = player.width;
+                let ph = player.height;
+                // adjust for duck
+                if (player.isDucking) {
+                    ph = player.duckHeight;
+                    py = player.groundY - ph;
+                }
+                if (player.lane === obs.lane) {
+                    if (rectCollide(px, py, pw, ph, obs.x, obs.y, obs.width, obs.height)) {
+                        // check if hoverboard
+                        if (hoverboardActive) {
+                            // break hoverboard, but survive
+                            hoverboardActive = false;
+                            hoverboardTimer = 0;
+                            addParticles(px + pw/2, py + ph/2, '#ffaa33', 20);
+                            // remove obstacle
+                            obstacles.splice(i, 1);
+                            continue;
+                        } else {
+                            // game over
+                            gameOver = true;
+                            addParticles(px + pw/2, py + ph/2, '#ff3333', 30);
+                            return;
+                        }
+                    }
+                }
+                // score if passed
+                if (!obs.passed && obs.x + obs.width < getLaneX(player.lane) + 10) {
+                    obs.passed = true;
+                    score += 1 * scoreMultiplier;
+                }
+            }
+
+            // coins
+            for (let i = coinItems.length-1; i >= 0; i--) {
+                let c = coinItems[i];
+                c.x -= speed * 1.2;
+                if (c.x + c.width < 0) { coinItems.splice(i, 1); continue; }
+                // magnet
+                let magnetRange = magnetActive ? 120 : 0;
+                let px = getLaneX(player.lane) + player.width/2;
+                let py = player.y - player.height/2;
+                let cx = c.x + c.width/2;
+                let cy = c.y + c.height/2;
+                let dist = Math.hypot(px - cx, py - cy);
+                if (magnetActive && dist < 120) {
+                    // pull coin toward player
+                    let angle = Math.atan2(py - cy, px - cx);
+                    c.x += Math.cos(angle) * 3;
+                    c.y += Math.sin(angle) * 3;
+                }
+                // collect
+                if (Math.abs(px - cx) < 30 && Math.abs(py - cy) < 30) {
+                    coins += 1 * Math.floor(scoreMultiplier);
+                    addParticles(c.x + c.width/2, c.y + c.height/2, '#f7d44a', 10);
+                    coinItems.splice(i, 1);
+                    updateUI();
+                    continue;
+                }
+            }
+
+            // powerups
+            for (let i = powerups.length-1; i >= 0; i--) {
+                let p = powerups[i];
+                p.x -= speed * 1.2;
+                if (p.x + p.width < 0) { powerups.splice(i, 1); continue; }
+                let px = getLaneX(player.lane) + player.width/2;
+                let py = player.y - player.height/2;
+                let cx = p.x + p.width/2;
+                let cy = p.y + p.height/2;
+                if (Math.abs(px - cx) < 32 && Math.abs(py - cy) < 32) {
+                    // activate
+                    if (p.type === 'magnet') { magnetActive = true; magnetTimer = 300; }
+                    else if (p.type === 'jumpboost') { jumpBoostActive = true; jumpBoostTimer = 400; }
+                    else if (p.type === 'hoverboard') { hoverboardActive = true; hoverboardTimer = 350; }
+                    else if (p.type === 'multiplier') { scoreMultiplier = 3; multiplierTimer = 400; }
+                    addParticles(p.x + p.width/2, p.y + p.height/2, '#76f2b0', 16);
+                    powerups.splice(i, 1);
+                }
+            }
+
+            // score increment per frame (distance)
+            score += 0.15 * speedMultiplier;
+            updateUI();
+
+            // particles update
+            for (let i = particles.length-1; i>=0; i--) {
+                let p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.05;
+                p.life--;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+        }
+
+        // ----- DRAW -----
+        function draw() {
+            ctx.clearRect(0, 0, W, H);
+
+            // sky & ground
+            let grad = ctx.createLinearGradient(0, 0, 0, H);
+            grad.addColorStop(0, '#a4d8f0');
+            grad.addColorStop(0.7, '#e0f0e0');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, W, H);
+            // ground
+            ctx.fillStyle = '#6b8c5c';
+            ctx.fillRect(0, player.groundY+8, W, 30);
+            ctx.fillStyle = '#4f6b3a';
+            ctx.fillRect(0, player.groundY+10, W, 8);
+            // lane markers
+            for (let i=0; i<3; i++) {
+                let x = LEFT_MARGIN + i * LANE_WIDTH + LANE_WIDTH/2;
+                ctx.strokeStyle = '#f5e9c4';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([8, 12]);
+                ctx.beginPath();
+                ctx.moveTo(x, 40);
+                ctx.lineTo(x, player.groundY-10);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            // draw powerups
+            for (let p of powerups) {
+                ctx.fillStyle = '#1e2f4a';
+                ctx.shadowColor = '#f5c542';
+                ctx.shadowBlur = 12;
+                ctx.beginPath();
+                ctx.arc(p.x + p.width/2, p.y + p.height/2, 18, 0, Math.PI*2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                ctx.font = '24px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#fff';
+                ctx.fillText(p.emoji, p.x + p.width/2, p.y + p.height/2-2);
+            }
+
+            // draw coins
+            for (let c of coinItems) {
+                ctx.shadowColor = '#f7d44a';
+                ctx.shadowBlur = 15;
+                ctx.fillStyle = '#f7d44a';
+                ctx.beginPath();
+                ctx.arc(c.x + c.width/2, c.y + c.height/2, 14, 0, Math.PI*2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = '#b8860b';
+                ctx.font = '16px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('💰', c.x + c.width/2, c.y + c.height/2-1);
+            }
+
+            // draw obstacles
+            for (let obs of obstacles) {
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = '#333';
+                ctx.fillStyle = '#2c3e50';
+                ctx.strokeStyle = '#1a1a2e';
+                ctx.lineWidth = 2;
+                // special colors
+                if (obs.type === 0) ctx.fillStyle = '#4a5f7a';
+                else if (obs.type === 1) ctx.fillStyle = '#8b6b4d';
+                else if (obs.type === 2) ctx.fillStyle = '#b87333';
+                else ctx.fillStyle = '#5d4e3b';
+                ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+                ctx.strokeRect(obs.x, obs.y, obs.width, obs.height);
+                ctx.shadowBlur = 0;
+                ctx.font = '26px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#fff';
+                ctx.fillText(obs.label, obs.x + obs.width/2, obs.y + obs.height/2-2);
+            }
+
+            // player
+            let px = getLaneX(player.lane);
+            let py = player.y - player.height;
+            if (player.isDucking) {
+                py = player.groundY - player.duckHeight;
+            }
+            ctx.shadowBlur = 16;
+            ctx.shadowColor = '#f5c542';
+            // body
+            ctx.fillStyle = '#1e3a5f';
+            ctx.beginPath();
+            ctx.roundRect(px, py, player.width, player.height, 10);
+            ctx.fill();
+            // tshirt مؤمن
+            ctx.fillStyle = '#f5c542';
+            ctx.font = 'bold 18px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('M', px + player.width/2, py + player.height/2 - 2);
+            // عيون
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(px+10, py+12, 5, 0, Math.PI*2);
+            ctx.arc(px+player.width-10, py+12, 5, 0, Math.PI*2);
+            ctx.fill();
+            ctx.fillStyle = '#0a1a2a';
+            ctx.beginPath();
+            ctx.arc(px+12, py+14, 2, 0, Math.PI*2);
+            ctx.arc(px+player.width-8, py+14, 2, 0, Math.PI*2);
+            ctx.fill();
+
+            // hoverboard effect
+            if (hoverboardActive) {
+                ctx.shadowBlur = 30;
+                ctx.shadowColor = '#ffaa33';
+                ctx.strokeStyle = '#ffaa33';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.roundRect(px-4, py+player.height-4, player.width+8, 8, 10);
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+            }
+
+            // particles
+            for (let p of particles) {
+                ctx.globalAlpha = p.life / 40;
+                ctx.fillStyle = p.color || '#ffd966';
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size * 0.4, 0, Math.PI*2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+
+            // game over overlay
+            if (gameOver) {
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.fillRect(0, 0, W, H);
+                ctx.fillStyle = '#f5c542';
+                ctx.font = 'bold 44px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('🛑 مسكك الغفير', W/2, H/2-30);
+                ctx.font = '24px sans-serif';
+                ctx.fillStyle = '#fff';
+                ctx.fillText('👮‍♂️ اضغط للبدء', W/2, H/2 + 50);
+            }
+
+            // powerup indicators
+            let indicatorY = 40;
+            if (magnetActive) { ctx.fillStyle = '#f7d44a'; ctx.font = '18px sans-serif'; ctx.fillText('🧲 مغناطيس', 20, indicatorY); indicatorY += 26; }
+            if (jumpBoostActive) { ctx.fillStyle = '#b3e5fc'; ctx.fillText('👟 نطة عالية', 20, indicatorY); indicatorY += 26; }
+            if (hoverboardActive) { ctx.fillStyle = '#ffaa33'; ctx.fillText('🛹 Hoverboard', 20, indicatorY); indicatorY += 26; }
+            if (scoreMultiplier > 1) { ctx.fillStyle = '#ff6b6b'; ctx.fillText(`✖️${scoreMultiplier}`, 20, indicatorY); }
+        }
+
+        // helper roundRect
+        CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+            if (w < 2 * r) r = w / 2;
+            if (h < 2 * r) r = h / 2;
+            this.moveTo(x + r, y);
+            this.lineTo(x + w - r, y);
+            this.quadraticCurveTo(x + w, y, x + w, y + r);
+            this.lineTo(x + w, y + h - r);
+            this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+            this.lineTo(x + r, y + h);
+            this.quadraticCurveTo(x, y + h, x, y + h - r);
+            this.lineTo(x, y + r);
+            this.quadraticCurveTo(x, y, x + r, y);
+            this.closePath();
+            return this;
+        };
+
+        // ----- CONTROLS -----
+        function handleSwipe(dx, dy) {
+            if (gameOver) {
+                resetGame();
+                return;
+            }
+            // swipes
+            if (Math.abs(dx) > Math.abs(dy)) {
+                if (dx > 15 && player.lane < 2) { player.lane++; }
+                else if (dx < -15 && player.lane > 0) { player.lane--; }
+            } else {
+                if (dy < -20 && !player.isJumping) {
+                    // jump
+                    player.isJumping = true;
+                    player.jumpSpeed = -7 - (jumpBoostActive ? 4 : 0);
+                    player.y -= 2;
+                } else if (dy > 20) {
+                    // duck
+                    player.isDucking = true;
+                    player.height = player.duckHeight;
+                } else {
+                    // release duck
+                    player.isDucking = false;
+                    player.height = player.normalHeight;
+                }
+            }
+        }
+
+        // Touch events
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const t = e.touches[0];
+            touchStartX = t.clientX;
+            touchStartY = t.clientY;
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (gameOver) return;
+            const t = e.touches[0];
+            let dx = t.clientX - touchStartX;
+            let dy = t.clientY - touchStartY;
+            if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+                handleSwipe(dx, dy);
+                touchStartX = t.clientX;
+                touchStartY = t.clientY;
+            }
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            // release duck
+            player.isDucking = false;
+            player.height = player.normalHeight;
+            if (gameOver) resetGame();
+        }, { passive: false });
+
+        // keyboard
+        document.addEventListener('keydown', (e) => {
+            if (gameOver) { resetGame(); return; }
+            const key = e.key;
+            if (key === 'ArrowLeft' && player.lane > 0) { player.lane--; e.preventDefault(); }
+            else if (key === 'ArrowRight' && player.lane < 2) { player.lane++; e.preventDefault(); }
+            else if (key === 'ArrowUp' && !player.isJumping) {
+                player.isJumping = true;
+                player.jumpSpeed = -7 - (jumpBoostActive ? 4 : 0);
+                player.y -= 2;
+                e.preventDefault();
+            }
+            else if (key === 'ArrowDown') {
+                player.isDucking = true;
+                player.height = player.duckHeight;
+                e.preventDefault();
+            }
+        });
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowDown') {
+                player.isDucking = false;
+                player.height = player.normalHeight;
+                e.preventDefault();
+            }
+        });
+
+        // restart click
+        canvas.addEventListener('click', (e) => {
+            if (gameOver) resetGame();
+        });
+
+        // game loop
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        // init
+        resetGame();
+        loop();
+    })();
+</script>
+</body>
+</html>
+```
+
+Gameplay & Mechanics
+
+Here's how the game works and how you can control it:
+
+· Core Objective: You control a character running through a city street, dodging obstacles and collecting items. The game ends if you hit an obstacle, and your score increases the further you run.
+· Controls: On mobile, swipe Up to jump, Down to duck, and Left/Right to change lanes. On a computer, use the Arrow Keys (↑ ↓ ← →) for the same actions.
+· Obstacles & Items: You'll encounter different obstacles like trains, wooden barriers, and gates. Collect coins to earn currency, and grab power-ups like a magnet, jump boost, hoverboard, or score multiplier to help you survive and increase your score.
